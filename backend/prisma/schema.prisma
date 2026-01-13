@@ -1,0 +1,227 @@
+// This is your Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---
+enum RoleType {
+  SUPER_ADMIN
+  HR_ADMIN
+  EMPLOYEE
+}
+
+enum LeaveType {
+  SICK
+  CASUAL
+  EARNED
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PayrollStatus {
+  GENERATED
+  PAID
+}
+
+// NEW: APPRAISAL STATUS
+enum AppraisalStatus {
+  PENDING_SELF
+  PENDING_MANAGER
+  COMPLETED
+}
+
+// --- MODELS ---
+
+model User {
+  id       String   @id @default(uuid())
+  email    String   @unique
+  password String   // Will store hashed password
+  isActive Boolean  @default(true)
+  
+  role     RoleType @default(EMPLOYEE)
+  
+  employee Employee? // One-to-one relation with Employee profile
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Department {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  employees Employee[] 
+  
+  // A department has one manager
+  managerId String?    @unique
+  
+  // If a manager is deleted, the department remains, but 'managerId' becomes null.
+  manager   Employee?  @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
+}
+
+model Employee {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  
+  // Email Field
+  email     String   @unique
+
+  joiningDate DateTime
+  designation String
+  
+  // Link to Login User
+  userId      String?  @unique
+  user        User?    @relation(fields: [userId], references: [id])
+
+  // Department Link
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  // Hierarchy (Reporting Manager)
+  reportsToId String?
+  reportsTo   Employee?  @relation("ReportsTo", fields: [reportsToId], references: [id], onDelete: SetNull)
+  subordinates Employee[] @relation("ReportsTo")
+
+  // Inverse relation: If this employee is a Department Manager
+  managingDept Department? @relation("DepartmentManager")
+
+  // --- ATTENDANCE RELATION ---
+  attendanceRecords Attendance[]
+  
+  // --- LEAVE MANAGEMENT ---
+  sickLeaveBalance   Int @default(10)
+  casualLeaveBalance Int @default(10)
+  earnedLeaveBalance Int @default(15)
+  
+  leaveRequests      LeaveRequest[]
+
+  // --- PAYROLL RELATION ---
+  baseSalary         Int       @default(50000) // Default Annual/Monthly Base Salary
+  payrolls           Payroll[]
+  
+  // --- NEW: PERFORMANCE MANAGEMENT ---
+  appraisals         Appraisal[]
+  // -------------------------
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// --- ATTENDANCE MODEL ---
+model Attendance {
+  id          String    @id @default(uuid())
+  
+  // Stores "Midnight" timestamp to check unique days
+  date        DateTime  
+  
+  clockIn     DateTime  // Exact time they arrived
+  clockOut    DateTime? // Exact time they left (Nullable)
+  
+  status      String    @default("PRESENT") 
+
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Ensure one employee has only ONE record per day
+  @@unique([date, employeeId])
+}
+
+// --- LEAVE REQUEST MODEL ---
+model LeaveRequest {
+  id          String      @id @default(uuid())
+  
+  startDate   DateTime
+  endDate     DateTime
+  daysCount   Int         // Total days applied for
+  
+  type        LeaveType
+  reason      String
+  
+  status      LeaveStatus @default(PENDING)
+  
+  // Admin comment (e.g. "Rejection reason")
+  adminComment String?
+
+  employeeId  String
+  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+// --- PAYROLL MODEL ---
+model Payroll {
+  id          String        @id @default(uuid())
+  
+  month       String        // e.g., "February"
+  year        Int           // e.g., 2026
+  
+  // Earnings
+  baseSalary  Int
+  allowances  Int           @default(0) // Bonus, HRA, etc.
+  
+  // Deductions
+  deductions  Int           @default(0) // Tax, PF
+  
+  // Calculated
+  netSalary   Int
+  
+  status      PayrollStatus @default(GENERATED)
+  paymentDate DateTime?
+
+  employeeId  String
+  employee    Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime      @default(now())
+}
+
+// --- NEW: PERFORMANCE CYCLE ---
+model PerformanceCycle {
+  id        String      @id @default(uuid())
+  title     String      // e.g. "Annual Review 2026"
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean     @default(true)
+  
+  reviews   Appraisal[] // One cycle has many reviews
+  
+  createdAt DateTime    @default(now())
+}
+
+// --- NEW: APPRAISAL (REVIEW) ---
+model Appraisal {
+  id             String   @id @default(uuid())
+  
+  // Relations
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  cycleId        String
+  cycle          PerformanceCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  // Review Content
+  selfReview     String?  // Written by Employee
+  managerReview  String?  // Written by Manager/Admin
+  rating         Int?     // 1 to 5 Stars
+  
+  status         AppraisalStatus @default(PENDING_SELF)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Constraint: One review per employee per cycle
+  @@unique([employeeId, cycleId])
+}

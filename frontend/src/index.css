@@ -1,0 +1,37 @@
+:root {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #008080; /* Windows Teal Background */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+}
+
+/* --- RETRO COMPONENTS --- */
+
+/* Sharp Buttons */
+.ant-btn {
+  border-radius: 2px !important; 
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 2px 2px 0px #000 !important; /* Hard shadow */
+}
+
+/* Boxy Inputs */
+.ant-input, .ant-input-password {
+  border-radius: 0px !important;
+  border: 1px solid #555 !important;
+  background-color: #fff;
+}
+
+/* Hard Cards */
+.ant-card {
+  border-radius: 0px !important;
+  border: 2px solid #fff !important; /* Bevel effect */
+  border-right-color: #404040 !important;
+  border-bottom-color: #404040 !important;
+  background-color: #c0c0c0 !important; /* Classic Gray */
+}
