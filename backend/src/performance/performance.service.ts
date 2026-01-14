@@ -48,7 +48,7 @@ export class PerformanceService {
       where: { cycleId },
       include: { 
         employee: {
-           include: { department: true }
+          include: { department: true }
         } 
       },
       orderBy: { employee: { firstName: 'asc' } }
@@ -78,7 +78,7 @@ export class PerformanceService {
     // Security: Ensure this appraisal belongs to the logged-in user
     const emp = await this.prisma.employee.findUnique({ where: { userId } });
     
-    // --- FIX IS HERE: Check if emp exists before accessing .id ---
+    // Check if emp exists before accessing .id
     if (!emp) throw new BadRequestException('Employee profile not found');
     
     if (appraisal.employeeId !== emp.id) throw new BadRequestException('Unauthorized');
@@ -101,6 +101,57 @@ export class PerformanceService {
         rating: Number(data.rating),
         status: 'COMPLETED'
       }
+    });
+  }
+
+  // --- 7. HR: PROPOSE OR UPDATE HIKE (Admin) ---
+  async proposeHike(appraisalId: string, percentage: number) {
+    const appraisal = await this.prisma.appraisal.findUnique({
+      where: { id: appraisalId },
+      include: { employee: true }
+    });
+
+    if (!appraisal) throw new NotFoundException('Appraisal not found');
+
+    // Calculate New Salary
+    const currentSalary = appraisal.employee.baseSalary;
+    const hikeAmount = Math.round(currentSalary * (percentage / 100));
+    const newSalary = currentSalary + hikeAmount;
+
+    // Save Proposal (Does NOT update Employee table yet)
+    return this.prisma.appraisal.update({
+      where: { id: appraisalId },
+      data: {
+        currentSalary: currentSalary,
+        hikePercentage: percentage,
+        proposedSalary: newSalary,
+        isAccepted: false // Reset acceptance if HR updates the offer
+      }
+    });
+  }
+
+  // --- 8. EMPLOYEE: ACCEPT HIKE (Employee) ---
+  async acceptHike(userId: string, appraisalId: string) {
+    const appraisal = await this.prisma.appraisal.findUnique({
+      where: { id: appraisalId },
+      include: { employee: true }
+    });
+
+    // Security Checks
+    if (!appraisal) throw new NotFoundException('Appraisal not found');
+    if (appraisal.employee.userId !== userId) throw new BadRequestException('Unauthorized');
+    if (!appraisal.proposedSalary) throw new BadRequestException('No hike has been proposed yet.');
+
+    // 1. Update Employee Base Salary (The "Real" Change)
+    await this.prisma.employee.update({
+      where: { id: appraisal.employeeId },
+      data: { baseSalary: appraisal.proposedSalary }
+    });
+
+    // 2. Mark Appraisal as Accepted
+    return this.prisma.appraisal.update({
+      where: { id: appraisalId },
+      data: { isAccepted: true }
     });
   }
 }

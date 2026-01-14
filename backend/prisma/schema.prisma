@@ -217,6 +217,13 @@ model Appraisal {
   managerReview  String?  // Written by Manager/Admin
   rating         Int?     // 1 to 5 Stars
   
+  // --- NEW: HIKE & NEGOTIATION ---
+  currentSalary  Int?     // Snapshot of salary at time of review
+  hikePercentage Float?   // e.g. 15.5 (%)
+  proposedSalary Int?     // The new amount offered by HR
+  isAccepted     Boolean  @default(false)
+  // -------------------------------
+
   status         AppraisalStatus @default(PENDING_SELF)
   
   createdAt      DateTime @default(now())

@@ -42,4 +42,16 @@ export class PerformanceController {
   submitManager(@Param('id') id: string, @Body() body: any) {
     return this.performanceService.submitManagerReview(id, body);
   }
+
+  // Admin: Propose/Update Offer
+  @Patch('propose-hike/:id')
+  proposeHike(@Param('id') id: string, @Body() body: { percentage: number }) {
+    return this.performanceService.proposeHike(id, Number(body.percentage));
+  }
+
+  // Employee: Accept Offer
+  @Patch('accept-hike/:id')
+  acceptHike(@Request() req, @Param('id') id: string) {
+    return this.performanceService.acceptHike(req.user.userId, id);
+  }
 }

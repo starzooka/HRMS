@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Button, Input, Form, Tag, Alert, Rate, Steps, message, Spin } from 'antd';
+import { Card, Button, Input, Form, Tag, Alert, Rate, Steps, message, Spin, Popconfirm } from 'antd';
 import { RocketOutlined, CheckCircleOutlined, SyncOutlined, SmileOutlined } from '@ant-design/icons';
 import MainLayout from '../components/MainLayout';
 import api from '../api/axios';
@@ -136,6 +136,51 @@ const EmployeePerformance: React.FC = () => {
             <Card type="inner" title="Your Submission" style={{ marginTop: 20 }}>
                <p style={{ color: '#666' }}>{appraisal.selfReview}</p>
             </Card>
+
+            {/* --- NEW: SALARY OFFER SECTION --- */}
+            {appraisal.proposedSalary && (
+                <Card style={{ marginTop: 20, borderColor: appraisal.isAccepted ? '#b7eb8f' : '#1890ff', borderWidth: 2 }}>
+                    {appraisal.isAccepted ? (
+                        <div style={{ textAlign: 'center', color: 'green' }}>
+                            <CheckCircleOutlined style={{ fontSize: 40, marginBottom: 10 }} />
+                            <h2>Salary Revision Accepted!</h2>
+                            <p>Your new annual base salary is <strong>₹{appraisal.proposedSalary.toLocaleString()}</strong>.</p>
+                        </div>
+                    ) : (
+                        <div style={{ textAlign: 'center' }}>
+                            <RocketOutlined style={{ fontSize: 32, color: '#1890ff' }} />
+                            <h2>Congratulations!</h2>
+                            <p>Based on your performance, management has proposed a salary revision.</p>
+                            
+                            <div style={{ fontSize: 24, margin: '20px 0', fontWeight: 'bold' }}>
+                                <span style={{ color: '#1890ff' }}>{appraisal.hikePercentage}% Hike</span> <br/>
+                                <span style={{ fontSize: 16, color: '#666', fontWeight: 'normal' }}>
+                                    New CTC: ₹{appraisal.proposedSalary.toLocaleString()}
+                                </span>
+                            </div>
+
+                            <Popconfirm 
+                                title="Accept this offer?" 
+                                description="This will update your current salary profile immediately."
+                                onConfirm={async () => {
+                                    try {
+                                        await api.patch(`/performance/accept-hike/${appraisal.id}`);
+                                        message.success('Offer Accepted!');
+                                        fetchMyReview(); // Refresh UI
+                                    } catch (e) {
+                                        message.error('Failed to accept offer');
+                                    }
+                                }}
+                            >
+                                <Button type="primary" size="large">Accept Revised Salary</Button>
+                            </Popconfirm>
+                            <div style={{ marginTop: 10, fontSize: 12, color: '#999' }}>
+                                *To negotiate, please contact HR offline.
+                            </div>
+                        </div>
+                    )}
+                </Card>
+            )}
           </div>
         )}
 

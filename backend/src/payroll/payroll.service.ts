@@ -5,10 +5,9 @@ import { PrismaService } from '../prisma/prisma.service';
 export class PayrollService {
   constructor(private prisma: PrismaService) {}
 
-  // --- 1. GENERATE PAYROLL (Admin) ---
+  // --- 1. GENERATE PAYROLL (Smart Calculation) ---
   async generatePayroll(month: string, year: number) {
     // 1. Check if payroll already exists for this month/year
-    // We check if at least one record exists to prevent duplicates
     const existing = await this.prisma.payroll.findFirst({
       where: { month, year }
     });
@@ -26,26 +25,44 @@ export class PayrollService {
 
     // 3. Calculate Salary for each employee
     const payrolls = employees.map((emp) => {
-      // LOGIC: Simple Calculation for V1
-      // Tax = 10% of Base Salary
-      const tax = Math.floor(emp.baseSalary * 0.1); 
+      // --- CTC BREAKDOWN LOGIC (Monthly) ---
+      // 1. Calculate Monthly Gross from Annual CTC
+      const monthlyCTC = emp.baseSalary / 12;
+
+      // 2. Earnings Components
+      const basic = Math.round(monthlyCTC * 0.50); // Basic is 50% of CTC
+      const hra = Math.round(basic * 0.40);        // HRA is 40% of Basic
+      const medical = 1250;                        // Fixed Medical Allowance
+      // Special Allowance gets the remainder
+      const specialAllowance = Math.max(0, monthlyCTC - (basic + hra + medical));
+
+      const totalEarnings = basic + hra + medical + specialAllowance;
+
+      // 3. Deductions Components
+      const pf = Math.round(basic * 0.12);         // PF is 12% of Basic
+      const professionalTax = 200;                 // Fixed PT
       
-      // Net = Base - Tax
-      const net = emp.baseSalary - tax;
+      // Simple Income Tax (TDS) Logic: 10% if Monthly Gross > 50k
+      const tds = totalEarnings > 50000 ? Math.round(totalEarnings * 0.10) : 0; 
+
+      const totalDeductions = pf + professionalTax + tds;
+
+      // 4. Net Pay
+      const netSalary = totalEarnings - totalDeductions;
 
       return {
         month,
         year: Number(year),
-        baseSalary: emp.baseSalary,
-        allowances: 0,       // Future: Add logic for bonuses
-        deductions: tax,     // Future: Add logic for LOP (Loss of Pay)
-        netSalary: net,
-        status: 'GENERATED', // Default status
+        baseSalary: emp.baseSalary, // Store Annual CTC for reference
+        allowances: totalEarnings,  // Store Monthly Gross Earnings here
+        deductions: totalDeductions, // Store Total Monthly Deductions
+        netSalary: netSalary,
+        status: 'GENERATED',
         employeeId: emp.id
       };
     });
 
-    // 4. Bulk Insert into Database
+    // 4. Bulk Insert
     await this.prisma.payroll.createMany({
       data: payrolls as any
     });

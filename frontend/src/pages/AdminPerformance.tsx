@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Table, Button, Card, Tag, message, Select, 
-  Row, Col, Modal, Form, Input, DatePicker, Rate, Space 
+  Row, Col, Modal, Form, Input, DatePicker, Rate, Space, InputNumber, Statistic 
 } from 'antd';
 import { 
   PlusOutlined, ReloadOutlined, 
-  CheckCircleOutlined, StarOutlined, EditOutlined 
+  EditOutlined, RiseOutlined 
 } from '@ant-design/icons';
 import MainLayout from '../components/MainLayout';
 import api from '../api/axios';
@@ -24,10 +24,12 @@ const AdminPerformance: React.FC = () => {
   // Modal States
   const [isCycleModalOpen, setIsCycleModalOpen] = useState(false);
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false);
+  const [isHikeModalOpen, setIsHikeModalOpen] = useState(false);
   
   // Forms
   const [cycleForm] = Form.useForm();
   const [gradeForm] = Form.useForm();
+  const [hikeForm] = Form.useForm();
   const [currentReview, setCurrentReview] = useState<any>(null);
 
   useEffect(() => {
@@ -71,6 +73,7 @@ const AdminPerformance: React.FC = () => {
     } catch (error) { message.error('Failed to create cycle'); }
   };
 
+  // --- GRADING ACTIONS ---
   const openGradeModal = (record: any) => {
     setCurrentReview(record);
     gradeForm.setFieldsValue({
@@ -90,6 +93,25 @@ const AdminPerformance: React.FC = () => {
     } catch (error) { message.error('Submission failed'); }
   };
 
+  // --- HIKE ACTIONS ---
+  const openHikeModal = (record: any) => {
+    setCurrentReview(record);
+    hikeForm.setFieldsValue({ percentage: record.hikePercentage || 10 });
+    setIsHikeModalOpen(true);
+  };
+
+  const handleSubmitHike = async () => {
+    try {
+      const values = await hikeForm.validateFields();
+      await api.patch(`/performance/propose-hike/${currentReview.id}`, {
+        percentage: values.percentage
+      });
+      message.success('Salary Revision Proposed Successfully');
+      setIsHikeModalOpen(false);
+      fetchReviews(selectedCycle!); 
+    } catch (error) { message.error('Proposal Failed'); }
+  };
+
   // --- COLUMNS ---
   const columns = [
     {
@@ -103,15 +125,10 @@ const AdminPerformance: React.FC = () => {
       )
     },
     {
-      title: 'Self Review',
-      dataIndex: 'selfReview',
-      ellipsis: true,
-      render: (text: string) => text || <span style={{color:'#ccc'}}>Not submitted</span>
-    },
-    {
       title: 'Rating',
       dataIndex: 'rating',
-      render: (rating: number) => rating ? <Rate disabled defaultValue={rating} style={{ fontSize: 14 }} /> : '-'
+      width: 140,
+      render: (rating: number) => rating ? <Rate disabled defaultValue={rating} style={{ fontSize: 14 }} /> : <span style={{color:'#ccc'}}>-</span>
     },
     {
       title: 'Status',
@@ -124,19 +141,41 @@ const AdminPerformance: React.FC = () => {
       }
     },
     {
+      title: 'Hike Status',
+      key: 'hikeStatus',
+      render: (_: any, r: any) => {
+          if (!r.proposedSalary) return <Tag>Not Initiated</Tag>;
+          if (r.isAccepted) return <Tag color="green">ACCEPTED</Tag>;
+          return <Tag color="orange">OFFER SENT</Tag>;
+      }
+    },
+    {
       title: 'Action',
       key: 'action',
-      render: (_: any, record: any) => (
-        <Button 
-          type="primary" 
-          size="small" 
-          icon={<EditOutlined />} 
-          disabled={record.status === 'PENDING_SELF'} // Cannot grade until employee submits
-          onClick={() => openGradeModal(record)}
-        >
-          Grade
-        </Button>
-      )
+      render: (_: any, record: any) => {
+        if (record.status !== 'COMPLETED') {
+            return (
+                <Button 
+                  type="primary" 
+                  size="small" 
+                  icon={<EditOutlined />} 
+                  disabled={record.status === 'PENDING_SELF'} 
+                  onClick={() => openGradeModal(record)}
+                >
+                  Grade
+                </Button>
+            );
+        }
+        return (
+            <Button 
+                style={{ backgroundColor: '#722ed1', borderColor: '#722ed1', color: 'white' }}
+                size="small" icon={<RiseOutlined />} 
+                onClick={() => openHikeModal(record)}
+            >
+                Promote / Hike
+            </Button>
+        );
+      }
     }
   ];
 
@@ -201,7 +240,7 @@ const AdminPerformance: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* --- GRADING MODAL --- */}
+      {/* --- GRADE MODAL --- */}
       <Modal 
         title={`Finalize Review for ${currentReview?.employee?.firstName}`} 
         open={isGradeModalOpen} 
@@ -223,6 +262,51 @@ const AdminPerformance: React.FC = () => {
             <Rate />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* --- HIKE PROPOSAL MODAL --- */}
+      <Modal
+        title="Salary Revision Proposal"
+        open={isHikeModalOpen}
+        onOk={handleSubmitHike}
+        onCancel={() => setIsHikeModalOpen(false)}
+        okText="Send Proposal"
+      >
+         <Form form={hikeForm} layout="vertical">
+            <div style={{ marginBottom: 20 }}>
+                <p><strong>Current Annual CTC:</strong> ₹{currentReview?.employee?.baseSalary.toLocaleString()}</p>
+                <p style={{fontSize: 12, color:'#666'}}>
+                    Enter the hike percentage. The employee will see this offer on their dashboard 
+                    and must accept it to finalize the revision.
+                </p>
+            </div>
+
+            <Form.Item 
+                name="percentage" 
+                label="Hike Percentage (%)" 
+                rules={[{ required: true, message: 'Please enter a percentage' }]}
+            >
+                <InputNumber min={0} max={100} step={0.5} style={{ width: '100%' }} />
+            </Form.Item>
+            
+            <Form.Item shouldUpdate>
+                {() => {
+                    const pct = hikeForm.getFieldValue('percentage') || 0;
+                    const current = currentReview?.employee?.baseSalary || 0;
+                    const hikeAmount = Math.round(current * (pct / 100));
+                    const newTotal = current + hikeAmount;
+                    
+                    return (
+                        <div style={{ background: '#f0f5ff', padding: 15, borderRadius: 5 }}>
+                           <Statistic title="Proposed New Salary" value={newTotal} precision={0} prefix="₹" valueStyle={{ color: '#1890ff' }} />
+                           <div style={{ marginTop: 5, color: '#1890ff' }}>
+                              Increase: +₹{hikeAmount.toLocaleString()}
+                           </div>
+                        </div>
+                    );
+                }}
+            </Form.Item>
+         </Form>
       </Modal>
 
     </MainLayout>
