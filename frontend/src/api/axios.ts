@@ -1,10 +1,12 @@
 import axios from 'axios';
 
+// Look for VITE_API_URL. If not found, use localhost (for dev).
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 const api = axios.create({
-  baseURL: 'http://localhost:3000', // Points to your NestJS Backend
+  baseURL: baseURL,
 });
 
-// Automatically add the token to every request if we have one
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {

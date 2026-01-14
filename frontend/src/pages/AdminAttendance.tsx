@@ -5,7 +5,6 @@ import MainLayout from '../components/MainLayout';
 import api from '../api/axios';
 import dayjs from 'dayjs';
 
-const { Option } = Select;
 
 const AdminAttendance: React.FC = () => {
   const [viewMode, setViewMode] = useState('monthly'); // 'daily' or 'monthly'

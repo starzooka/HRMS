@@ -153,7 +153,7 @@ const AdminDashboard: React.FC = () => {
     { 
       title: 'NAME', 
       key: 'name', 
-      render: (text: any, record: any) => (
+      render: (_: any, record: any) => (
         // CLICKABLE NAME -> Navigate to Details
         <div 
           style={{ cursor: 'pointer', color: '#1890ff' }} 

@@ -5,19 +5,21 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 1. Enable CORS (Allow Frontend to talk to Backend)
   app.enableCors({
-    origin: 'http://localhost:5173', // Your Frontend URL
+    // 'true' allows ANY domain. Safe for initial deployment.
+    // Later, you can change this to your specific Vercel URL.
+    origin: true, 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
   
-  // 2. Enable Global Validation
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     transform: true,
   }));
 
-  await app.listen(3000);
+  // IMPORTANT: Use the system port OR 3000
+  // '0.0.0.0' is required for Render/Docker
+  await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }
 bootstrap();
