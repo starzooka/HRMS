@@ -6,9 +6,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    // 'true' allows ANY domain. Safe for initial deployment.
-    // Later, you can change this to your specific Vercel URL.
-    origin: true, 
+    // Allow ONLY your Vercel App and Localhost (for testing)
+    origin: [
+      'https://starzhrms.vercel.app/login', // Your Production Frontend
+      'http://localhost:5173',          // Your Local Development
+      'http://localhost:4173'           // Your Local Preview
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
@@ -18,8 +21,6 @@ async function bootstrap() {
     transform: true,
   }));
 
-  // IMPORTANT: Use the system port OR 3000
-  // '0.0.0.0' is required for Render/Docker
   await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }
 bootstrap();
