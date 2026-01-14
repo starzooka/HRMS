@@ -6,21 +6,17 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    // Allow ONLY your Vercel App and Localhost (for testing)
     origin: [
-      'https://starzhrms.vercel.app/login', // Your Production Frontend
-      'http://localhost:5173',          // Your Local Development
-      'http://localhost:4173'           // Your Local Preview
+      'https://starzhrms.vercel.app', // <--- ADD YOUR VERCEL URL HERE
+      'http://localhost:5173',        // Keep localhost for testing
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
   
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true,
-  }));
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
+  // Render automatically assigns a port to process.env.PORT
   await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }
 bootstrap();
