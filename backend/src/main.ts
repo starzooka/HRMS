@@ -5,11 +5,25 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const allowedOrigins = new Set(
+    [
+      process.env.FRONTEND_URL,
+      'https://starzhrms.vercel.app',
+      'http://localhost:5173',
+    ].filter(Boolean),
+  );
+
+  const isLocalDevOrigin = (origin: string) =>
+    /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+
   app.enableCors({
-    origin: [
-      'https://starzhrms.vercel.app', // <--- ADD YOUR VERCEL URL HERE
-      'http://localhost:5173',        // Keep localhost for testing
-    ],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.has(origin) || isLocalDevOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked origin: ${origin}`), false);
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });

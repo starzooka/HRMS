@@ -159,7 +159,7 @@ const AdminDashboard: React.FC = () => {
           style={{ cursor: 'pointer', color: '#1890ff' }} 
           onClick={() => navigate(`/employee/${record.id}`)}
         >
-           <Space direction="vertical" size={0}>
+           <Space orientation="vertical" size={0}>
              <strong style={{ fontSize: '15px' }}>{record.firstName} {record.lastName}</strong>
              {record.userId && <Tag color="green" style={{fontSize: '10px'}}>HAS LOGIN</Tag>}
            </Space>
@@ -208,7 +208,7 @@ const AdminDashboard: React.FC = () => {
         </Col>
         <Col span={8}>
            <Card variant="borderless">
-             <Statistic title="SYSTEM STATUS" value="ONLINE" valueStyle={{ color: '#3f8600' }} prefix={<CheckCircleOutlined />} />
+             <Statistic title="SYSTEM STATUS" value="ONLINE" styles={{ content: { color: '#3f8600' } }} prefix={<CheckCircleOutlined />} />
            </Card>
         </Col>
       </Row>

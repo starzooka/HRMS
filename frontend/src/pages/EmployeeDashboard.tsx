@@ -124,7 +124,7 @@ const EmployeeDashboard: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: 24 }}>
         {/* --- ATTENDANCE CARD --- */}
         <Col span={8}>
-          <Card title="Attendance" bordered={false} style={{ height: '100%' }}>
+          <Card title="Attendance" variant="borderless" style={{ height: '100%' }}>
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <h1 style={{ color: status.color, margin: 0 }}>{status.text}</h1>
               {punchInTime && <p>Started: {new Date(punchInTime).toLocaleTimeString()}</p>}
@@ -141,7 +141,7 @@ const EmployeeDashboard: React.FC = () => {
 
         {/* --- LEAVE PROFILE CARD --- */}
         <Col span={8}>
-           <Card title="Leave Balance" bordered={false} style={{ height: '100%' }}>
+           <Card title="Leave Balance" variant="borderless" style={{ height: '100%' }}>
               <Row gutter={16} style={{ textAlign: 'center' }}>
                 <Col span={8}>
                   <Statistic title="Sick" value={leaveBalance?.sick || 0} valueStyle={{ color: '#cf1322' }} />
@@ -164,7 +164,7 @@ const EmployeeDashboard: React.FC = () => {
 
         {/* --- QUICK INFO CARD --- */}
         <Col span={8}>
-           <Card title="Recent Activity" bordered={false} style={{ height: '100%' }}>
+           <Card title="Recent Activity" variant="borderless" style={{ height: '100%' }}>
              <Table 
                dataSource={leaveHistory.slice(0, 3)} 
                columns={historyColumns} 
